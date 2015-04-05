@@ -1,0 +1,47 @@
+@namespace("com.example")
+protocol SparkParquetAvro {
+
+
+record StayData {
+  string property="";
+  string brand="";
+  string propertyAddress="";
+  string propertyCity="";
+  string propertyState="";
+  string propertyZip="";
+  string propertyCountry="";
+  string account="";
+  string custId="";
+  string eliteStatus="";
+  string cpNumber="";
+  string bookingChannel="";
+  string guestSource="";
+  string arrival="";
+  string departure="";
+  string los="";
+  string firstName="";
+  string lastName="";
+  string guestAddress="";
+  string guestCity="";
+  string guestState="";
+  string guestZip="";
+  string rateCode="";
+  string rate="";
+  string revenue="";
+  string resDate="";
+  string bookedDayOfWeek="";
+  string roomType="";
+  string source="";
+  string walkIn="";
+  string bookingWindow="";
+  string arrivalDayOfWeek="";
+  string arrivalMonth="";
+  string censusRegion="";
+  string mktLocationDes="";
+  string locCodeDesc="";
+  string description="";
+  string custIdHash="";
+  string cpNumberHash="";
+}
+
+}
