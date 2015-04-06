@@ -12,6 +12,9 @@ import org.apache.spark._
 import org.slf4j.LoggerFactory
 import parquet.avro.{AvroReadSupport, AvroParquetOutputFormat, AvroWriteSupport}
 import parquet.hadoop.{ParquetInputFormat, ParquetOutputFormat}
+import com.datastax.spark.connector._ 
+import com.datastax.spark.connector.cql.CassandraConnector
+import com.datastax.spark.connector.streaming._
 
 object FeatureFunctions {
   def brandScoreMap = Map(
@@ -120,6 +123,7 @@ object IngestData {
     //logger.info("Elite Status : " + stayData.getEliteStatus())
     CustScore(stayData.getCustId(), featureScore)
   }
+ 
 
   def main(args: Array[String]) {
     if (args.length < 2) {
@@ -132,6 +136,9 @@ object IngestData {
     val conf = new SparkConf
     conf.setMaster(args(0))
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    conf.set("spark.cassandra.connection.host", "172.28.65.97")
+    conf.set("spark.cassandra.connection.native.port", "9042")
+    conf.set("spark.executor.memory", "8g")
     conf.setAppName("IngestData")
 
     val sc = new SparkContext(conf)
@@ -216,6 +223,11 @@ object IngestData {
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
 
     aggregatedScores.foreach(println)
+    aggregatedScores.saveToCassandra("mdoctor","cust_score")
+    
+    
+   // aggregatedScores.foreach(custScore => store(custScore))
+    
    // (143787224,2.7755575615628914E-17)
 
 //    val something = allRecords.filter(_.getCustId == "143787224")
