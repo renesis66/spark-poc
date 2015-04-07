@@ -123,6 +123,11 @@ object IngestData {
     //logger.info("Elite Status : " + stayData.getEliteStatus())
     CustScore(stayData.getCustId(), featureScore)
   }
+  
+ /* private def store(custScore: CustScore) {
+   
+      custScore.saveToCassandra("mdoctor","cust_score")
+  }*/
  
 
   def main(args: Array[String]) {
@@ -223,10 +228,9 @@ object IngestData {
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
 
     aggregatedScores.foreach(println)
-    aggregatedScores.saveToCassandra("mdoctor","cust_score")
+   aggregatedScores.saveToCassandra("mdoctor","cust_score")
     
-    
-   // aggregatedScores.foreach(custScore => store(custScore))
+  //  aggregatedScores.foreach(custScore => store(custScore))
     
    // (143787224,2.7755575615628914E-17)
 
