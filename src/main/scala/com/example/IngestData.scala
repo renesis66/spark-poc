@@ -36,11 +36,25 @@ object FeatureFunctions {
   )
 
   def smokingPreferenceScoreMap = Map(
+    "CNK" -> 1.5,
+    "DD" -> 1.912,
+    "DNK" -> .312,
+    "K" -> .375,
+    "K2" -> .562,
+    "KP" -> .625,
     "ND" -> 1.5,
     "NDD" -> 1.5,
+    "NK" -> 1.125,
+    "NK1" -> 1.375,
+    "NKW" -> .25,
     "NQQ" -> 1.5,
+    "NQQ1" -> 1.562,
     "NQ" -> 1.5,
-    "CNK" -> 1.5,
+    "NQ1" -> 1.750,
+    "Q" -> .375,
+    "QQ" -> 1.812,
+    "SNK" -> 1.625,
+    "SNQQ" -> 1.875,
     "YD" -> -.75,
     "YDD" -> -.75,
     "YQQ" -> -.75,
@@ -207,9 +221,6 @@ object IngestData {
     // You need to pass the schema to AvroParquet when you are writing objects but not when you
     // are reading them. The schema is saved in Parquet file for future readers to use.
     AvroParquetOutputFormat.setSchema(job, StayData.SCHEMA$)
-    // Try to create a feature vector for each stay
-    val featureVector = allRecords.map(calculateCustomerStayFeatureScores)
-    val keyedFeatureVector = featureVector.keyBy(_.custId)
     // Create a PairRDD with all keys set to null
     val rdd = allRecords.map(stayData => (null, stayData))
     // Save the RDD to a Parquet file in our temporary output directory
@@ -223,6 +234,9 @@ object IngestData {
       classOf[Void], classOf[StayData], job.getConfiguration)
 
 
+    // Try to create a feature vector for each stay
+    val featureVector = allRecords.map(calculateCustomerStayFeatureScores)
+    val keyedFeatureVector = featureVector.keyBy(_.custId)
     //featureVector.foreach(x => logger.info("Customer " + x._1 + " has stay score of " + x._2))
     // Sum each customer stay B/L score and average
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
@@ -234,7 +248,7 @@ object IngestData {
     
    // (143787224,2.7755575615628914E-17)
 
-//    val something = allRecords.filter(_.getCustId == "143787224")
+//    val something = allRecords.filter(_.getCustId == "183828578")
 //            something.foreach(println)
 //        val something = featureVector.filter(_.custId == "143787224")
 //                something.foreach(println)
