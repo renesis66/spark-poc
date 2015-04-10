@@ -179,8 +179,7 @@ object IngestData {
 
     val job = new Job()
 
-    val tempDir = Files.createTempDir()
-    val outputDir = new File(tempDir, "output").getAbsolutePath
+    val outputDir = new File("temp", "output").getAbsolutePath
     logger.info(outputDir)
 
     val input = sc.textFile(inputFile)
@@ -256,7 +255,7 @@ object IngestData {
     // Sum each customer stay B/L score and average
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
 
-    featureVector.foreach(println)
+//    featureVector.foreach(println)
 //    aggregatedScores.foreach(println)
 //   aggregatedScores.saveToCassandra("spark_poc","cust_score")
 
