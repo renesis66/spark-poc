@@ -1,9 +1,10 @@
 target/
 .idea
 *.iml
-
+.DS_Store
 /bin/
 .project
 .classpath
 .settings/
 .svn/
+hash*.txt

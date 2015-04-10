@@ -9,6 +9,7 @@ import java.io.File
 import com.google.common.io.Files
 import org.apache.hadoop.mapreduce.Job
 import org.apache.spark._
+import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
 import parquet.avro.{AvroReadSupport, AvroParquetOutputFormat, AvroWriteSupport}
 import parquet.hadoop.{ParquetInputFormat, ParquetOutputFormat}
@@ -18,68 +19,58 @@ import com.datastax.spark.connector.streaming._
 
 object FeatureFunctions {
   def brandScoreMap = Map(
-    "Cambria Suites" -> 0.5016,
-    "Comfort Inn" -> 1.25,
-    "Comfort Inn & Suites" -> -2.25,
-    "Comfort Suites" -> 1.125,
-    "Sleep Inn" -> .875,
-    "Sleep Inn & Suites" -> 1.875,
-    "Clarion" -> -1.5,
-    "Econo Lodge" -> 2.5,
-    "EconoLodge Inn and Suites" -> 0.25,
-    "MainStay Suites" -> -.125,
-    "Quality Inn" -> 1.375,
-    "Quality Inn & Suites" -> 2.375,
-    "Rodeway Inn" -> -0.5,
-    "Rodeway Inn and Suites" -> 0.5,
-    "Suburban Hotels" -> 0.75
+    "Cambria Suites" -> 1.2746,
+    "Clarion" -> 1.0498,
+    "Comfort Inn" -> 0.8873,
+    "Comfort Inn & Suites" -> 0.947,
+    "Comfort Suites" -> 0.947,
+    "Econo Lodge" -> 0.7572,
+    "EconoLodge Inn and Suites" -> 0.7572,
+    "MainStay Suites" -> 0.7851,
+    "Quality Inn" -> 0.8714,
+    "Quality Inn & Suites" -> 0.8714,
+    "Rodeway Inn" -> 0.0,
+    "Rodeway Inn and Suites" -> 0.0,
+    "Sleep Inn" -> 0.8102,
+    "Sleep Inn & Suites" -> 0.8102,
+    "Suburban Hotels" -> 0.9134
   )
 
-  def smokingPreferenceScoreMap = Map(
-    "CNK" -> 1.5,
-    "DD" -> 1.912,
-    "DNK" -> .312,
-    "K" -> .375,
-    "K2" -> .562,
-    "KP" -> .625,
-    "ND" -> 1.5,
-    "NDD" -> 1.5,
-    "NK" -> 1.125,
-    "NK1" -> 1.375,
-    "NKW" -> .25,
-    "NQQ" -> 1.5,
-    "NQQ1" -> 1.562,
-    "NQ" -> 1.5,
-    "NQ1" -> 1.750,
-    "Q" -> .375,
-    "QQ" -> 1.812,
-    "SNK" -> 1.625,
-    "SNQQ" -> 1.875,
-    "YD" -> -.75,
-    "YDD" -> -.75,
-    "YQQ" -> -.75,
-    "YQ" -> -.75,
-    "YK" -> -.75
+  def numberOfBedsInRoomScoreMap = Map(
+    "CNK" -> -0.1223,
+    "DD" -> 0.0,
+    "DNK" -> -0.5293,
+    "K" -> -0.1223,
+    "K2" -> -0.1223,
+    "KP" -> -0.1223,
+    "ND" -> -0.7122,
+    "NDD" -> 0.0,
+    "NK" -> -0.1223,
+    "NK1" -> -0.1223,
+    "NKW" -> -0.1223,
+    "NQQ" -> -0.1694,
+    "NQQ1" -> -0.1694,
+    "NQ" -> 0.02,
+    "NQ1" -> 0.02,
+    "Q" -> 0.02,
+    "QQ" -> -0.1694,
+    "SNK" -> -0.1223,
+    "SNQQ" -> -0.1694,
+    "YD" -> -0.7122,
+    "YDD" -> 0.0,
+    "YQQ" -> -0.1694,
+    "YQ" -> 0.02,
+    "YK" -> -0.1223
   )
 
   def arrivalDayOfWeekScoreMap = Map(
-    "Monday" -> 0.1,
-    "Tuesday" -> 0.2,
-    "Wednesday" -> 0.3,
-    "Thursday" -> 0.4,
-    "Friday" -> 0.5,
-    "Saturday" -> 0.6,
-    "Sunday" -> 0.7
-  )
-
-  def bookedDayOfWeekScoreMap = Map(
-    "Monday" -> 0.1,
-    "Tuesday" -> 0.2,
-    "Wednesday" -> 0.3,
-    "Thursday" -> 0.4,
-    "Friday" -> 0.5,
-    "Saturday" -> 0.6,
-    "Sunday" -> 0.7
+    "Monday" -> 0.7311,
+    "Tuesday" -> 0.689,
+    "Wednesday" -> 0.4899,
+    "Thursday" -> -0.0571,
+    "Friday" -> -0.6749,
+    "Saturday" -> -0.8516,
+    "Sunday" -> 0.0
   )
 
   def eliteStatusScoreMap = Map(
@@ -97,7 +88,32 @@ object FeatureFunctions {
     "D" -> 0.4,
     "G" -> 0.5
   )
+
+  def arrivalMonthScoreMap = Map(
+    "Jan" -> 0.5131,
+    "Feb" -> 0.3643,
+    "Mar" -> 0.1874,
+    "Apr" -> 0.2054,
+    "May" -> 0.1087,
+    "Jun" -> 0.1862,
+    "Jul" -> -0.0275,
+    "Aug" -> 0.0,
+    "Sep" -> 0.1195,
+    "Oct" -> 0.0802,
+    "Nov" -> 0.251,
+    "Dec" -> 0.0
+  )
+
+  def bookedWithinDaysScoreMap(days: Int): Double = days match {
+    case x if 0 until 1 contains x => 0.6899
+    case x if 1 until 3 contains x => 0.5376
+    case x if 3 until 7 contains x => 0.5394
+    case x if 7 until 14 contains x => 0.307
+    case x if 14 until 21 contains x => 0.1929
+    case _ => 0.0
+  }
 }
+
 
 
 object IngestData {
@@ -115,36 +131,34 @@ object IngestData {
   }
 
   private def printStayData(tuple: Tuple2[Void, StayData]) = {
-    if (tuple._2 != null)
-
+    if (tuple._2 != null) {
       logger.info("Property ID:" + tuple._2.getProperty)
-    logger.info("Brand:" + tuple._2.getBrand)
-    logger.info("Property Address:" + tuple._2.getPropertyAddress)
-    logger.info("City:" + tuple._2.getPropertyCity)
-    logger.info("State:" + tuple._2.getPropertyState)
-    logger.info("Zip:" + tuple._2.getPropertyZip)
+      logger.info("Brand:" + tuple._2.getBrand)
+      logger.info("Property Address:" + tuple._2.getPropertyAddress)
+      logger.info("City:" + tuple._2.getPropertyCity)
+      logger.info("State:" + tuple._2.getPropertyState)
+      logger.info("Zip:" + tuple._2.getPropertyZip)
+    }
   }
 
   private def calculateCustomerStayFeatureScores(stayData: StayData): CustScore = {
-    val featureScore = (FeatureFunctions.brandScoreMap.getOrElse(stayData.getBrand, 0.0)
-      + FeatureFunctions.smokingPreferenceScoreMap.getOrElse(stayData.getRoomType, 0.0)
-      + FeatureFunctions.arrivalDayOfWeekScoreMap.getOrElse(stayData.getArrivalDayOfWeek, 0.0)
-      + FeatureFunctions.bookedDayOfWeekScoreMap.getOrElse(stayData.getBookedDayOfWeek, 0.0)
-      + FeatureFunctions.eliteStatusScoreMap.getOrElse(stayData.getEliteStatus, 0.0)
-      + FeatureFunctions.bookingChannelScoreMap.getOrElse(stayData.getBookingChannel, 0.0))
+    val featureScore =
+      ( FeatureFunctions.eliteStatusScoreMap.getOrElse(stayData.getEliteStatus, 0.0)
+        + FeatureFunctions.brandScoreMap.getOrElse(stayData.getBrand, 0.0)
+        + FeatureFunctions.numberOfBedsInRoomScoreMap.getOrElse(stayData.getRoomType, 0.0)
+        + FeatureFunctions.arrivalDayOfWeekScoreMap.getOrElse(stayData.getArrivalDayOfWeek, 0.0)
+        + FeatureFunctions.arrivalMonthScoreMap.getOrElse(stayData.getArrivalMonth, 0.0)
+        + FeatureFunctions.bookedWithinDaysScoreMap(Integer.decode(stayData.getBookingWindow))
+        + FeatureFunctions.bookingChannelScoreMap.getOrElse(stayData.getBookingChannel, 0.0)
+        )
 
-
-    //logger.info("Elite Status : " + stayData.getEliteStatus())
-    CustScore(stayData.getCustId(), featureScore)
+    val businessLeisureScore = 1/(1 + Math.exp(-1*(-1.3732 + featureScore)))
+    CustScore(stayData.getCustId(), businessLeisureScore)
   }
   
- /* private def store(custScore: CustScore) {
-   
-      custScore.saveToCassandra("mdoctor","cust_score")
-  }*/
- 
-
   def main(args: Array[String]) {
+    val startTime = new DateTime()
+
     if (args.length < 2) {
       logger.info("Usage: [sparkmaster] [inputfile]")
       exit(1)
@@ -155,7 +169,8 @@ object IngestData {
     val conf = new SparkConf
     conf.setMaster(args(0))
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-    conf.set("spark.cassandra.connection.host", "172.28.65.97")
+//    conf.set("spark.cassandra.connection.host", "172.28.65.97")
+    conf.set("spark.cassandra.connection.host", "127.0.0.1")
     conf.set("spark.cassandra.connection.native.port", "9042")
     conf.set("spark.executor.memory", "8g")
     conf.setAppName("IngestData")
@@ -174,7 +189,7 @@ object IngestData {
 
     logger.info("First record contained :")
     mappedRecords.first().foreach(a => print(a))
-    val allRecords = mappedRecords.filter(y => y.size >= 39).map(x => StayData.newBuilder()
+    val allRecords = mappedRecords.filter(y => y.size >= 39).filter(z => z(8).length > 0).map(x => StayData.newBuilder()
       .setProperty(x(0))
       .setBrand(x(1))
       .setPropertyAddress(x(2))
@@ -241,18 +256,15 @@ object IngestData {
     // Sum each customer stay B/L score and average
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
 
-    aggregatedScores.foreach(println)
-   aggregatedScores.saveToCassandra("mdoctor","cust_score")
-    
-  //  aggregatedScores.foreach(custScore => store(custScore))
-    
-   // (143787224,2.7755575615628914E-17)
+    featureVector.foreach(println)
+//    aggregatedScores.foreach(println)
+//   aggregatedScores.saveToCassandra("spark_poc","cust_score")
 
-//    val something = allRecords.filter(_.getCustId == "183828578")
-//            something.foreach(println)
-//        val something = featureVector.filter(_.custId == "143787224")
-//                something.foreach(println)
 
+    System.out.println("***** Elapsed time ***** \n" + (new DateTime().getMillis()- startTime.getMillis)
+      + " milliseconds.\n"
+     + "records : " + featureVector.count()
+    + "\n************************")
 
   }
 
