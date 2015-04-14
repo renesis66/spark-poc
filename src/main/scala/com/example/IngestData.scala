@@ -104,6 +104,18 @@ object FeatureFunctions {
     "Dec" -> 0.0
   )
 
+  def rateCodeScoreMap = Map(
+    "RACK" -> -0.1007,
+    "SRD" -> -1.856,
+    "SCR" -> 0.3736,
+    "LEXP" -> -0.052,
+    "SPC" -> 0.6777,
+    "SGM" -> 0.3835,
+    "SED" -> 7.7695,
+    "S3A" -> -0.4914,
+    "SSC" -> -1.0363
+  )
+
   def bookedWithinDaysScoreMap(days: Int): Double = days match {
     case x if 0 until 1 contains x => 0.6899
     case x if 1 until 3 contains x => 0.5376
@@ -142,14 +154,17 @@ object IngestData {
   }
 
   private def calculateCustomerStayFeatureScores(stayData: StayData): CustScore = {
+    val bookingWindow = Integer.decode(stayData.getBookingWindow)
     val featureScore =
       ( FeatureFunctions.eliteStatusScoreMap.getOrElse(stayData.getEliteStatus, 0.0)
         + FeatureFunctions.brandScoreMap.getOrElse(stayData.getBrand, 0.0)
         + FeatureFunctions.numberOfBedsInRoomScoreMap.getOrElse(stayData.getRoomType, 0.0)
         + FeatureFunctions.arrivalDayOfWeekScoreMap.getOrElse(stayData.getArrivalDayOfWeek, 0.0)
         + FeatureFunctions.arrivalMonthScoreMap.getOrElse(stayData.getArrivalMonth, 0.0)
-        + FeatureFunctions.bookedWithinDaysScoreMap(Integer.decode(stayData.getBookingWindow))
+        + FeatureFunctions.bookedWithinDaysScoreMap(bookingWindow)
+        + bookingWindow*(-0.00437)
         + FeatureFunctions.bookingChannelScoreMap.getOrElse(stayData.getBookingChannel, 0.0)
+        + FeatureFunctions.rateCodeScoreMap.getOrElse(stayData.getRateCode, 0.0)
         )
 
     val businessLeisureScore = 1/(1 + Math.exp(-1*(-1.3732 + featureScore)))
@@ -170,8 +185,8 @@ object IngestData {
     conf.setMaster(args(0))
     conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 //    conf.set("spark.cassandra.connection.host", "172.28.65.97")
-    conf.set("spark.cassandra.connection.host", "127.0.0.1")
-    conf.set("spark.cassandra.connection.native.port", "9042")
+//    conf.set("spark.cassandra.connection.host", "127.0.0.1")
+//    conf.set("spark.cassandra.connection.native.port", "9042")
     conf.set("spark.executor.memory", "8g")
     conf.setAppName("IngestData")
 
@@ -255,9 +270,9 @@ object IngestData {
     // Sum each customer stay B/L score and average
     val aggregatedScores = keyedFeatureVector.aggregateByKey(CustMean(0,0))((cm,cs) => cm + CustMean(cs.score,1), _ + _).mapValues(_.mean)
 
-//    featureVector.foreach(println)
+    featureVector.foreach(println)
 //    aggregatedScores.foreach(println)
-//   aggregatedScores.saveToCassandra("spark_poc","cust_score")
+   aggregatedScores.saveToCassandra("spark_poc","cust_score")
 
 
     System.out.println("***** Elapsed time ***** \n" + (new DateTime().getMillis()- startTime.getMillis)
