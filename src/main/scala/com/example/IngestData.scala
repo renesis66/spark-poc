@@ -131,8 +131,6 @@ object FeatureFunctions {
 object IngestData {
   val logger = LoggerFactory.getLogger(IngestData.getClass)
 
-  case class Property(name: String, lovesPandas: Boolean)
-
   case class CustScore(custId: String, score: Double)
 
   case class CustMean(sum: Double, count: Long) {
@@ -272,7 +270,7 @@ object IngestData {
 
     featureVector.foreach(println)
 //    aggregatedScores.foreach(println)
-   aggregatedScores.saveToCassandra("spark_poc","cust_score")
+//   aggregatedScores.saveToCassandra("spark_poc","cust_score")
 
 
     System.out.println("***** Elapsed time ***** \n" + (new DateTime().getMillis()- startTime.getMillis)
